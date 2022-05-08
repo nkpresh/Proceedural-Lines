@@ -92,7 +92,17 @@ public class Path
 
         }
     }
-
+    public void SplitSegment(Vector2 anchorPos, int segmentIndex)
+    {
+        points.InsertRange(segmentIndex * 3 + 2, new Vector2[] { Vector2.zero, anchorPos, Vector2.zero });
+        if (autoSetControlPoints)
+        {
+            AutoSetAllAffectedControlPoints(segmentIndex * 3 + 3);
+        }
+        else{
+            AutoSetAnchorControlPoints(segmentIndex * 3 + 3);
+        }
+    }
     public void DeleteSegment(int anchorIndex)
     {
         if (numSegments > 2 || isClosed && numSegments > 1)

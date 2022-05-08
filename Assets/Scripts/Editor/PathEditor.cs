@@ -9,6 +9,10 @@ public class PathEditor : Editor
     PathCreator creator;
     Path path;
 
+    const float segmentSelectDistanceThreshold = .1f;
+    int selectedSegmentIndex = -1;
+
+
     private void OnSceneGUI()
     {
         Input();
@@ -52,8 +56,16 @@ public class PathEditor : Editor
         Vector2 mousePos = HandleUtility.GUIPointToWorldRay(guiEvent.mousePosition).origin;
         if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0 && guiEvent.shift)
         {
-            Undo.RecordObject(creator, "Add Segment");
-            path.AddSegment(mousePos);
+            if (selectedSegmentIndex != -1)
+            {
+                Undo.RecordObject(creator, "Split Segment");
+                path.SplitSegment(mousePos, selectedSegmentIndex);
+            }
+            else if (!path.IsClosed)
+            {
+                Undo.RecordObject(creator, "Add Segment");
+                path.AddSegment(mousePos);
+            }
         }
 
         if (guiEvent.type == EventType.MouseUp && guiEvent.button == 1)
@@ -75,6 +87,25 @@ public class PathEditor : Editor
                 path.DeleteSegment(closestAnchorIndex);
             }
         }
+        if (guiEvent.type == EventType.MouseMove)
+        {
+            float minDistToSegment = segmentSelectDistanceThreshold;
+            int newSelectedSegmentIndex = -1;
+            for (int i = 0; i < path.numSegments; i++)
+            {
+                Vector2[] points = path.getPointsInSegment(i);
+                float dist = HandleUtility.DistancePointBezier(mousePos, points[0], points[3], points[1], points[2]);
+                if (dist < minDistToSegment)
+                {
+                    minDistToSegment = dist; newSelectedSegmentIndex = i;
+                }
+            }
+            if (newSelectedSegmentIndex != selectedSegmentIndex)
+            {
+                selectedSegmentIndex = newSelectedSegmentIndex;
+                HandleUtility.Repaint();
+            }
+        }
 
     }
     void Draw()
@@ -86,7 +117,8 @@ public class PathEditor : Editor
             Handles.color = Color.white;
             Handles.DrawLine(points[1], points[0]);
             Handles.DrawLine(points[3], points[2]);
-            Handles.DrawBezier(points[0], points[3], points[1], points[2], Color.green, null, 2);
+            Color segmentColor = (i == selectedSegmentIndex && Event.current.shift) ? Color.red : Color.green;
+            Handles.DrawBezier(points[0], points[3], points[1], points[2], segmentColor, null, 2);
         }
         Handles.color = Color.red;
         for (int i = 0; i < path.numPoints; i++)
