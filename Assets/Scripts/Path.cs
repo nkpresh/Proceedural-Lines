@@ -23,6 +23,36 @@ public class Path
     public int numSegments { get { return points.Count / 3; } }
 
     public Vector2 this[int i] { get { return points[i]; } }
+
+    public bool IsClosed
+    {
+        get
+        {
+            return isClosed;
+        }
+        set
+        {
+            if (isClosed != value)
+            {
+                isClosed = value;
+                if (isClosed)
+                {
+                    points.Add(points[points.Count - 1] * 2 - points[points.Count - 2]);
+                    points.Add(points[0] * 2 - points[1]);
+                    if (autoSetControlPoints)
+                    {
+                        AutoSetAnchorControlPoints(0);
+                        AutoSetAnchorControlPoints(points.Count - 3);
+                    }
+                }
+                else
+                {
+                    points.RemoveRange(points.Count - 2, 2);
+                    AutoSetStartAndEndControls();
+                }
+            }
+        }
+    }
     public bool AutoSetControlPoints
     {
         get
@@ -63,6 +93,30 @@ public class Path
         }
     }
 
+    public void DeleteSegment(int anchorIndex)
+    {
+        if (numSegments > 2 || isClosed && numSegments > 1)
+        {
+            if (anchorIndex == 0)
+            {
+                if (isClosed)
+                {
+                    points[points.Count - 1] = points[2];
+                }
+                points.RemoveRange(0, 3);
+            }
+            else if (anchorIndex == points.Count - 1 && isClosed)
+            {
+                points.RemoveRange(anchorIndex - 2, 3);
+            }
+            else
+            {
+                points.RemoveRange(anchorIndex - 1, 3);
+            }
+        }
+
+    }
+
     public Vector2[] getPointsInSegment(int i)
     {
         return new Vector2[] { points[i * 3], points[i * 3 + 1], points[i * 3 + 2], points[loopIndex(i * 3 + 3)] };
@@ -72,7 +126,8 @@ public class Path
     {
         Vector2 deltaMove = pos - points[i];
 
-        if(i%3==0||!autoSetControlPoints){
+        if (i % 3 == 0 || !autoSetControlPoints)
+        {
             points[i] = pos;
             if (autoSetControlPoints)
             {
@@ -166,25 +221,7 @@ public class Path
 
         }
     }
-    public void ToggleClosed()
-    {
-        isClosed = !isClosed;
-        if (isClosed)
-        {
-            points.Add(points[points.Count - 1] * 2 - points[points.Count - 2]);
-            points.Add(points[0] * 2 - points[1]);
-            if (autoSetControlPoints)
-            {
-                AutoSetAnchorControlPoints(0);
-                AutoSetAnchorControlPoints(points.Count - 3);
-            }
-        }
-        else
-        {
-            points.RemoveRange(points.Count - 2, 2);
-            AutoSetStartAndEndControls();
-        }
-    }
+
     int loopIndex(int i)
     {
         return (i + points.Count) % points.Count;

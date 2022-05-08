@@ -26,11 +26,12 @@ public class PathEditor : Editor
             creator.CreatePath();
             path = creator.path;
         }
-        if (GUILayout.Button("Toggle closed"))
+
+        bool isClosed = GUILayout.Toggle(path.IsClosed, "Closed");
+        if (isClosed != path.IsClosed)
         {
             Undo.RecordObject(creator, "Roggle closed");
-            creator.CreatePath();
-            path.ToggleClosed();
+            path.IsClosed = isClosed;
         }
 
         bool autoSetControlPoints = GUILayout.Toggle(path.AutoSetControlPoints, "Auto Set Control Points");
@@ -53,6 +54,26 @@ public class PathEditor : Editor
         {
             Undo.RecordObject(creator, "Add Segment");
             path.AddSegment(mousePos);
+        }
+
+        if (guiEvent.type == EventType.MouseUp && guiEvent.button == 1)
+        {
+            float minDistToAnchor = .05f;
+            int closestAnchorIndex = -1;
+            for (int i = 0; i < path.numPoints; i += 3)
+            {
+                float dst = Vector2.Distance(mousePos, path[i]);
+                if (dst < minDistToAnchor)
+                {
+                    minDistToAnchor = dst;
+                    closestAnchorIndex = i;
+                }
+            }
+            if (closestAnchorIndex != -1)
+            {
+                Undo.RecordObject(creator, "Delete Segment");
+                path.DeleteSegment(closestAnchorIndex);
+            }
         }
 
     }
