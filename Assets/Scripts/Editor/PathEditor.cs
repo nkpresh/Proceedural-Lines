@@ -7,7 +7,11 @@ using UnityEngine;
 public class PathEditor : Editor
 {
     PathCreator creator;
-    Path path;
+    Path path{
+        get{
+            return creator.path;
+        }
+    }
 
     const float segmentSelectDistanceThreshold = .1f;
     int selectedSegmentIndex = -1;
@@ -28,7 +32,6 @@ public class PathEditor : Editor
         {
             Undo.RecordObject(creator, "Create new");
             creator.CreatePath();
-            path = creator.path;
         }
 
         bool isClosed = GUILayout.Toggle(path.IsClosed, "Closed");
@@ -70,7 +73,7 @@ public class PathEditor : Editor
 
         if (guiEvent.type == EventType.MouseUp && guiEvent.button == 1)
         {
-            float minDistToAnchor = .05f;
+            float minDistToAnchor = creator.anchorDiameter * .5f;
             int closestAnchorIndex = -1;
             for (int i = 0; i < path.numPoints; i += 3)
             {
@@ -115,20 +118,29 @@ public class PathEditor : Editor
         {
             Vector2[] points = path.getPointsInSegment(i);
             Handles.color = Color.white;
-            Handles.DrawLine(points[1], points[0]);
-            Handles.DrawLine(points[3], points[2]);
-            Color segmentColor = (i == selectedSegmentIndex && Event.current.shift) ? Color.red : Color.green;
+            if (creator.displayControlPoints)
+            {
+                Handles.DrawLine(points[1], points[0]);
+                Handles.DrawLine(points[3], points[2]);
+            }
+
+            Color segmentColor = (i == selectedSegmentIndex && Event.current.shift) ? creator.selectedSegmentCol : creator.segmentCol;
             Handles.DrawBezier(points[0], points[3], points[1], points[2], segmentColor, null, 2);
         }
-        Handles.color = Color.red;
         for (int i = 0; i < path.numPoints; i++)
         {
-            Vector2 newPos = Handles.FreeMoveHandle(path[i], Quaternion.identity, .1f, Vector2.zero, Handles.CylinderHandleCap);
-            if (path[i] != newPos)
+            if (i % 3 == 0 || creator.displayControlPoints)
             {
-                Undo.RecordObject(creator, "Move Point");
-                path.MovePoints(i, newPos);
+                Handles.color = (i % 3 == 0) ? creator.anchorCol : creator.controlCol;
+                float handleSize = (i % 3 == 0) ? creator.anchorDiameter : creator.controlDiameter;
+                Vector2 newPos = Handles.FreeMoveHandle(path[i], Quaternion.identity, handleSize, Vector2.zero, Handles.CylinderHandleCap);
+                if (path[i] != newPos)
+                {
+                    Undo.RecordObject(creator, "Move Point");
+                    path.MovePoints(i, newPos);
+                }
             }
+
         }
     }
     private void OnEnable()
@@ -138,6 +150,5 @@ public class PathEditor : Editor
         {
             creator.CreatePath();
         }
-        path = creator.path;
     }
 }
